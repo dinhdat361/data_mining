@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dự Đoán Điểm G3 (Linear Regression)</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 40px;
+        background-color: #f8f9fa;
+      }
+      .container {
+        max-width: 700px;
+        margin: auto;
+        padding: 35px;
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        color: #007bff;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+        margin-bottom: 25px;
+        text-align: center;
+      }
+      label {
+        display: block;
+        margin-top: 15px;
+        font-weight: bold;
+        color: #343a40;
+      }
+      input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        box-sizing: border-box;
+        font-size: 16px;
+      }
+      button {
+        background-color: #28a745;
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 30px;
+        width: 100%;
+        font-size: 18px;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #218838;
+      }
+      .result-box {
+        margin-top: 35px;
+        padding: 25px;
+        border-radius: 8px;
+        background-color: #e9f2ff;
+        border: 1px solid #b3cde3;
+      }
+      .g3-prediction-label {
+        text-align: center;
+        font-size: 1.2em;
+        color: #007bff;
+        margin-bottom: 10px;
+      }
+      .g3-prediction-score {
+        font-size: 3em;
+        color: #dc3545;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .score-group {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-top: 15px;
+      }
+      .risk-list {
+        list-style-type: none;
+        padding: 0;
+        margin-top: 10px;
+      }
+      .risk-list li {
+        padding: 8px;
+        margin-bottom: 5px;
+        border-radius: 4px;
+        font-size: 0.95em;
+      }
+      .risk-list li:before {
+        content: "• ";
+        color: #dc3545;
+        font-weight: bold;
+      }
+      .risk-list li:contains("Thành tích Tốt"),
+      .risk-list li:contains("ổn định"),
+      .risk-list li:contains("không có yếu tố") {
+        background: #d4edda;
+        color: #155724;
+      }
+      .risk-list li:contains("Rủi ro Cao"),
+      .risk-list li:contains("Rủi ro Lịch sử"),
+      .risk-list li:contains("Rủi ro Nỗ lực") {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .error {
+        color: #dc3545;
+        font-weight: bold;
+        margin-top: 15px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Công Cụ Dự Đoán & Phân Tích Điểm Cuối Kỳ (G3)</h2>
+
+      <form action="/predict" method="post">
+        <label for="g1">1. Điểm Giữa kỳ 1 (G1, Thang 20):</label>
+        <input
+          type="number"
+          id="g1"
+          name="g1"
+          min="0"
+          max="20"
+          step="1"
+          value="{{ g1 if g1 is not none else '12' }}"
+          required
+        />
+
+        <label for="g2">2. Điểm Giữa kỳ 2 (G2, Thang 20):</label>
+        <input
+          type="number"
+          id="g2"
+          name="g2"
+          min="0"
+          max="20"
+          step="1"
+          value="{{ g2 if g2 is not none else '13' }}"
+          required
+        />
+
+        <label for="studytime"
+          >3. Thời gian học/tuần (studytime, 1: &lt;2h đến 4: &gt;10h):</label
+        >
+        <input
+          type="number"
+          id="studytime"
+          name="studytime"
+          min="1"
+          max="4"
+          step="1"
+          value="{{ studytime if studytime is not none else '2' }}"
+          required
+        />
+
+        <label for="absences">4. Số buổi vắng (absences, số lần):</label>
+        <input
+          type="number"
+          id="absences"
+          name="absences"
+          min="0"
+          step="1"
+          value="{{ absences if absences is not none else '4' }}"
+          required
+        />
+
+        <label for="failures"
+          >5. Số lần rớt môn trước đó (failures, 0-3):</label
+        >
+        <input
+          type="number"
+          id="failures"
+          name="failures"
+          min="0"
+          max="3"
+          step="1"
+          value="{{ failures if failures is not none else '0' }}"
+          required
+        />
+
+        <button type="submit">Dự Đoán & Phân Tích Rủi Ro</button>
+      </form>
+
+      {% if error_message %}
+      <p class="error">LỖI: {{ error_message }}</p>
+      {% endif %} {% if prediction_text %}
+      <div class="result-box">
+        <p class="g3-prediction-label">Điểm G3 Dự đoán:</p>
+        <p class="g3-prediction-score">{{ prediction_text }}</p>
+
+        <p class="score-group">Phân loại Kết quả: {{ score_group }}</p>
+
+        <hr style="border-top: 1px solid #b3cde3" />
+        <h4>Phân tích Yếu tố Rủi ro & Can thiệp:</h4>
+        <ul class="risk-list">
+          {% for factor in risk_factors %}
+          <li>{{ factor }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+  </body>
+</html>
